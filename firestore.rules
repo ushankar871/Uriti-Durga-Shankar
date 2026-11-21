@@ -1,0 +1,317 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isDeleteUnlocked(sellerId) {
+      return !exists(/databases/$(database)/documents/stores/$(sellerId)) ||
+             get(/databases/$(database)/documents/stores/$(sellerId)).data.deleteProtectionEnabled != true;
+    }
+
+    function isValidAccountProfile(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.role in ['SELLER', 'BUYER'] &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 160)) &&
+             (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 24)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidStoreConfig(data, sellerId) {
+      return data.userId is string &&
+             data.userId == sellerId &&
+             data.userId == request.auth.uid &&
+             data.storeName is string && data.storeName.size() >= 1 && data.storeName.size() <= 80 &&
+             data.address is string && data.address.size() >= 1 && data.address.size() <= 160 &&
+             data.storeLat is number && data.storeLat >= -90 && data.storeLat <= 90 &&
+             data.storeLng is number && data.storeLng >= -180 && data.storeLng <= 180 &&
+             data.deliveryRadiusKm is number && data.deliveryRadiusKm >= 0.5 && data.deliveryRadiusKm <= 50 &&
+             data.showOutOfStock is bool &&
+             data.deleteProtectionEnabled is bool &&
+             data.otpProtectionEnabled is bool &&
+             (!('lowStockThreshold' in data) || (data.lowStockThreshold is int && data.lowStockThreshold >= 1 && data.lowStockThreshold <= 1000)) &&
+             (!('lowStockAlertsEnabled' in data) || data.lowStockAlertsEnabled is bool) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidProduct(data, sellerId) {
+      return data.userId is string &&
+             data.userId == sellerId &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.category in ['GROCERY', 'PUJA', 'FANCY'] &&
+             data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 30 &&
+             data.priceInr is number && data.priceInr >= 0 && data.priceInr <= 1000000 &&
+             data.stockQty is int && data.stockQty >= 0 && data.stockQty <= 1000000 &&
+             data.inStock is bool &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 300)) &&
+             (!('photoUri' in data) || (data.photoUri is string && data.photoUri.size() <= 500)) &&
+             (!('imageTag' in data) || (data.imageTag is string && data.imageTag.size() <= 40)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidOrder(data) {
+      return data.sellerId is string && isValidId(data.sellerId) &&
+             data.buyerId is string && isValidId(data.buyerId) &&
+             data.storeName is string && data.storeName.size() >= 1 && data.storeName.size() <= 80 &&
+             data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 80 &&
+             data.neighborhood is string && data.neighborhood.size() >= 1 && data.neighborhood.size() <= 100 &&
+             data.itemsSummary is string && data.itemsSummary.size() >= 1 && data.itemsSummary.size() <= 300 &&
+             data.totalInr is number && data.totalInr >= 0 && data.totalInr <= 1000000 &&
+             data.status in ['PENDING', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED'] &&
+             data.lat is number && data.lat >= -90 && data.lat <= 90 &&
+             data.lng is number && data.lng >= -180 && data.lng <= 180 &&
+             (!('deliveryOtp' in data) || (data.deliveryOtp is string && data.deliveryOtp.matches('^[0-9]{4,8}$'))) &&
+             (!('deliveryMethod' in data) || data.deliveryMethod in ['', 'OTP', 'PHOTO']) &&
+             (!('deliveryProofUri' in data) || (data.deliveryProofUri is string && data.deliveryProofUri.size() <= 500)) &&
+             (!('riderLat' in data) || (data.riderLat is number && data.riderLat >= -90 && data.riderLat <= 90)) &&
+             (!('riderLng' in data) || (data.riderLng is number && data.riderLng >= -180 && data.riderLng <= 180)) &&
+             (!('riderUpdatedAt' in data) || (data.riderUpdatedAt is timestamp && data.riderUpdatedAt <= request.time)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidFeedback(data, sellerId) {
+      return data.sellerId is string &&
+             data.sellerId == sellerId &&
+             data.authorId is string &&
+             data.authorId == request.auth.uid &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80 &&
+             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             data.category in ['GENERAL', 'GROCERY', 'PUJA', 'FANCY', 'DELIVERY'] &&
+             data.comment is string && data.comment.size() >= 1 && data.comment.size() <= 400 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAuditLog(data, sellerId) {
+      return data.sellerId is string &&
+             data.sellerId == sellerId &&
+             data.sellerId == request.auth.uid &&
+             data.action is string && data.action.size() >= 1 && data.action.size() <= 40 &&
+             data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 240 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidWishlistItem(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.sellerId is string && isValidId(data.sellerId) &&
+             data.storeName is string && data.storeName.size() >= 1 && data.storeName.size() <= 80 &&
+             data.productId is string && isValidId(data.productId) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.category in ['GROCERY', 'PUJA', 'FANCY'] &&
+             data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 30 &&
+             data.priceInr is number && data.priceInr >= 0 && data.priceInr <= 1000000 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 300)) &&
+             (!('photoUri' in data) || (data.photoUri is string && data.photoUri.size() <= 500)) &&
+             (!('imageTag' in data) || (data.imageTag is string && data.imageTag.size() <= 40)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidBuyerAddress(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.label is string && data.label.size() >= 1 && data.label.size() <= 30 &&
+             data.recipientName is string && data.recipientName.size() >= 1 && data.recipientName.size() <= 80 &&
+             data.phoneNumber is string && data.phoneNumber.size() >= 1 && data.phoneNumber.size() <= 24 &&
+             data.streetAddress is string && data.streetAddress.size() >= 1 && data.streetAddress.size() <= 180 &&
+             data.neighborhood is string && data.neighborhood.size() >= 1 && data.neighborhood.size() <= 100 &&
+             (!('landmark' in data) || (data.landmark is string && data.landmark.size() <= 120)) &&
+             data.lat is number && data.lat >= -90 && data.lat <= 90 &&
+             data.lng is number && data.lng >= -180 && data.lng <= 180 &&
+             data.defaultAddress is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPreferredPaymentMethod(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.methodType in ['UPI', 'COD', 'CARD_LABEL', 'WALLET'] &&
+             data.displayLabel is string && data.displayLabel.size() >= 1 && data.displayLabel.size() <= 60 &&
+             (!('handleOrHint' in data) || (data.handleOrHint is string && data.handleOrHint.size() <= 120)) &&
+             data.defaultMethod is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /accounts/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'role', 'displayName', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'role', 'displayName', 'email', 'phoneNumber', 'createdAt', 'updatedAt']) &&
+                       isValidAccountProfile(incoming(), userId);
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidAccountProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['role', 'displayName', 'email', 'phoneNumber', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /wishlist/{itemId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(itemId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(itemId) &&
+                         incoming().keys().hasAll(['userId', 'sellerId', 'storeName', 'productId', 'name', 'category', 'unit', 'priceInr', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'sellerId', 'storeName', 'productId', 'name', 'category', 'unit', 'priceInr', 'description', 'photoUri', 'imageTag', 'createdAt']) &&
+                         isValidWishlistItem(incoming(), userId);
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(itemId);
+      }
+
+      match /addresses/{addressId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(addressId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(addressId) &&
+                         incoming().keys().hasAll(['userId', 'label', 'recipientName', 'phoneNumber', 'streetAddress', 'neighborhood', 'lat', 'lng', 'defaultAddress', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'label', 'recipientName', 'phoneNumber', 'streetAddress', 'neighborhood', 'landmark', 'lat', 'lng', 'defaultAddress', 'createdAt', 'updatedAt']) &&
+                         isValidBuyerAddress(incoming(), userId);
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(addressId) &&
+                         isValidBuyerAddress(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['label', 'recipientName', 'phoneNumber', 'streetAddress', 'neighborhood', 'landmark', 'lat', 'lng', 'defaultAddress', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(addressId);
+      }
+
+      match /paymentMethods/{methodId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(methodId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(methodId) &&
+                         incoming().keys().hasAll(['userId', 'methodType', 'displayLabel', 'defaultMethod', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'methodType', 'displayLabel', 'handleOrHint', 'defaultMethod', 'createdAt', 'updatedAt']) &&
+                         isValidPreferredPaymentMethod(incoming(), userId);
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(methodId) &&
+                         isValidPreferredPaymentMethod(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['methodType', 'displayLabel', 'handleOrHint', 'defaultMethod', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(methodId);
+      }
+    }
+
+    match /stores/{sellerId} {
+      allow get: if isSignedIn() && isValidId(sellerId);
+      allow list: if isSignedIn();
+      allow create: if isOwner(sellerId) &&
+                       isValidId(sellerId) &&
+                       incoming().keys().hasAll(['userId', 'storeName', 'address', 'storeLat', 'storeLng', 'deliveryRadiusKm', 'showOutOfStock', 'deleteProtectionEnabled', 'otpProtectionEnabled', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'storeName', 'address', 'storeLat', 'storeLng', 'deliveryRadiusKm', 'showOutOfStock', 'deleteProtectionEnabled', 'otpProtectionEnabled', 'lowStockThreshold', 'lowStockAlertsEnabled', 'createdAt', 'updatedAt']) &&
+                       isValidStoreConfig(incoming(), sellerId);
+      allow update: if isOwner(sellerId) &&
+                       isValidId(sellerId) &&
+                       isValidStoreConfig(incoming(), sellerId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['storeName', 'address', 'storeLat', 'storeLng', 'deliveryRadiusKm', 'showOutOfStock', 'deleteProtectionEnabled', 'otpProtectionEnabled', 'lowStockThreshold', 'lowStockAlertsEnabled', 'updatedAt']);
+      allow delete: if isOwner(sellerId) && isValidId(sellerId) && existing().deleteProtectionEnabled != true;
+
+      match /products/{productId} {
+        allow get: if isSignedIn() && isValidId(productId);
+        allow list: if isSignedIn();
+        allow create: if isOwner(sellerId) &&
+                         isValidId(productId) &&
+                         incoming().keys().hasAll(['userId', 'name', 'category', 'unit', 'priceInr', 'stockQty', 'inStock', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'name', 'category', 'unit', 'priceInr', 'stockQty', 'inStock', 'description', 'photoUri', 'imageTag', 'createdAt', 'updatedAt']) &&
+                         isValidProduct(incoming(), sellerId);
+        allow update: if isOwner(sellerId) &&
+                         isValidId(productId) &&
+                         isValidProduct(incoming(), sellerId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'category', 'unit', 'priceInr', 'stockQty', 'inStock', 'description', 'photoUri', 'imageTag', 'updatedAt']);
+        allow delete: if isOwner(sellerId) && isValidId(productId) && isDeleteUnlocked(sellerId);
+      }
+
+      match /feedback/{feedbackId} {
+        allow get: if isSignedIn() && isValidId(feedbackId);
+        allow list: if isSignedIn();
+        allow create: if isSignedIn() &&
+                         isValidId(feedbackId) &&
+                         incoming().keys().hasAll(['sellerId', 'authorId', 'authorName', 'rating', 'category', 'comment', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['sellerId', 'authorId', 'authorName', 'rating', 'category', 'comment', 'createdAt', 'updatedAt']) &&
+                         isValidFeedback(incoming(), sellerId);
+        allow update: if false;
+        allow delete: if isSignedIn() && isValidId(feedbackId) && (existing().authorId == request.auth.uid || (isOwner(sellerId) && isDeleteUnlocked(sellerId)));
+      }
+
+      match /auditLogs/{logId} {
+        allow get: if isOwner(sellerId) && isValidId(logId);
+        allow list: if isOwner(sellerId);
+        allow create: if isOwner(sellerId) &&
+                         isValidId(logId) &&
+                         incoming().keys().hasAll(['sellerId', 'action', 'summary', 'createdAt']) &&
+                         incoming().keys().hasOnly(['sellerId', 'action', 'summary', 'createdAt']) &&
+                         isValidAuditLog(incoming(), sellerId);
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && isValidId(orderId) && (existing().buyerId == request.auth.uid || existing().sellerId == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+      allow create: if isSignedIn() &&
+                       isValidId(orderId) &&
+                       incoming().keys().hasAll(['sellerId', 'buyerId', 'storeName', 'customerName', 'neighborhood', 'itemsSummary', 'totalInr', 'status', 'lat', 'lng', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['sellerId', 'buyerId', 'storeName', 'customerName', 'neighborhood', 'itemsSummary', 'totalInr', 'status', 'lat', 'lng', 'deliveryOtp', 'deliveryMethod', 'deliveryProofUri', 'riderLat', 'riderLng', 'riderUpdatedAt', 'createdAt', 'updatedAt']) &&
+                       incoming().buyerId == request.auth.uid &&
+                       incoming().status == 'PENDING' &&
+                       isValidOrder(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(orderId) &&
+                       existing().sellerId == request.auth.uid &&
+                       existing().status != 'DELIVERED' &&
+                       incoming().sellerId == existing().sellerId &&
+                       incoming().buyerId == existing().buyerId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'deliveryMethod', 'deliveryProofUri', 'riderLat', 'riderLng', 'riderUpdatedAt', 'updatedAt']) &&
+                       isValidOrder(incoming());
+      allow delete: if isSignedIn() && isValidId(orderId) && ((existing().sellerId == request.auth.uid && isDeleteUnlocked(existing().sellerId)) || (existing().buyerId == request.auth.uid && existing().status == 'PENDING'));
+    }
+  }
+}

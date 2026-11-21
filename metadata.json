@@ -1,0 +1,6 @@
+{
+  "name": "Lakshmi",
+  "description": "Lakshmi Seller & Buyer marketplace for puja needs, fancy items, and groceries with live stock tracking, OTP-guarded inventory, delivery map, and Gemini assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

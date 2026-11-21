@@ -1,0 +1,513 @@
+{
+  "entities": {
+    "AccountProfile": {
+      "title": "AccountProfile",
+      "description": "Separate seller or buyer account profile linked to the authenticated Google user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["SELLER", "BUYER"],
+          "description": "Active application portal role: SELLER or BUYER."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Account holder display name."
+        },
+        "email": {
+          "type": "string",
+          "description": "Optional account email address."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Optional account mobile number."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "role",
+        "displayName",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StoreConfig": {
+      "title": "StoreConfig",
+      "description": "Seller storefront location, delivery zone, out-of-stock visibility, and anti-theft delete protection settings.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated seller UID owning this store."
+        },
+        "storeName": {
+          "type": "string",
+          "description": "Store display name."
+        },
+        "address": {
+          "type": "string",
+          "description": "Store address or locality."
+        },
+        "storeLat": {
+          "type": "number",
+          "description": "Store latitude."
+        },
+        "storeLng": {
+          "type": "number",
+          "description": "Store longitude."
+        },
+        "deliveryRadiusKm": {
+          "type": "number",
+          "description": "Delivery radius in kilometers."
+        },
+        "showOutOfStock": {
+          "type": "boolean",
+          "description": "Whether out-of-stock items are visible to buyers."
+        },
+        "deleteProtectionEnabled": {
+          "type": "boolean",
+          "description": "Server-enforced anti-theft delete protection lock preventing product or review deletion while active."
+        },
+        "otpProtectionEnabled": {
+          "type": "boolean",
+          "description": "Requires 6-digit OTP verification before deleting or changing store/inventory data."
+        },
+        "lowStockThreshold": {
+          "type": "integer",
+          "description": "Minimum stock unit threshold below or equal to which low-inventory highlights and push alerts trigger."
+        },
+        "lowStockAlertsEnabled": {
+          "type": "boolean",
+          "description": "Whether automated low-stock alerts and push notifications are enabled for the seller."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "storeName",
+        "address",
+        "storeLat",
+        "storeLng",
+        "deliveryRadiusKm",
+        "showOutOfStock",
+        "deleteProtectionEnabled",
+        "otpProtectionEnabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "A grocery or puja samagri inventory item managed by a seller and visible to buyers.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated seller UID owning this product."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the grocery or puja item."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["GROCERY", "PUJA", "FANCY"],
+          "description": "Product category: GROCERY, PUJA, or FANCY."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Packaging or measurement unit (e.g., 500g, 1 pack, 1 L)."
+        },
+        "priceInr": {
+          "type": "number",
+          "description": "Selling price in INR."
+        },
+        "stockQty": {
+          "type": "integer",
+          "description": "Current stock unit count."
+        },
+        "inStock": {
+          "type": "boolean",
+          "description": "Visibility status indicating whether the item is currently in stock."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional short description of the item."
+        },
+        "photoUri": {
+          "type": "string",
+          "description": "Optional user-selected photo URI."
+        },
+        "imageTag": {
+          "type": "string",
+          "description": "Optional preset visual category tag for fallback artwork."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "category",
+        "unit",
+        "priceInr",
+        "stockQty",
+        "inStock",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SellerOrder": {
+      "title": "SellerOrder",
+      "description": "A buyer grocery and puja order tracked by both buyer and seller.",
+      "type": "object",
+      "properties": {
+        "sellerId": {
+          "type": "string",
+          "description": "Seller UID fulfilling this order."
+        },
+        "buyerId": {
+          "type": "string",
+          "description": "Buyer UID who placed this order."
+        },
+        "storeName": {
+          "type": "string",
+          "description": "Store display name."
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Buyer display name."
+        },
+        "neighborhood": {
+          "type": "string",
+          "description": "Delivery neighborhood or area."
+        },
+        "itemsSummary": {
+          "type": "string",
+          "description": "Summary of ordered items."
+        },
+        "totalInr": {
+          "type": "number",
+          "description": "Total order value in INR."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING", "PACKED", "OUT_FOR_DELIVERY", "DELIVERED"],
+          "description": "Fulfillment status."
+        },
+        "lat": {
+          "type": "number",
+          "description": "Delivery pin latitude."
+        },
+        "lng": {
+          "type": "number",
+          "description": "Delivery pin longitude."
+        },
+        "deliveryOtp": {
+          "type": "string",
+          "description": "Optional 6-digit buyer handoff OTP code."
+        },
+        "deliveryMethod": {
+          "type": "string",
+          "enum": ["", "OTP", "PHOTO"],
+          "description": "Verification method used to confirm delivery (OTP or PHOTO)."
+        },
+        "deliveryProofUri": {
+          "type": "string",
+          "description": "Optional delivery proof photo URI when confirmed via photograph."
+        },
+        "riderLat": {
+          "type": "number",
+          "description": "Optional live courier/order latitude during delivery."
+        },
+        "riderLng": {
+          "type": "number",
+          "description": "Optional live courier/order longitude during delivery."
+        },
+        "riderUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of last live delivery GPS coordinate update."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "sellerId",
+        "buyerId",
+        "storeName",
+        "customerName",
+        "neighborhood",
+        "itemsSummary",
+        "totalInr",
+        "status",
+        "lat",
+        "lng",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StoreFeedback": {
+      "title": "StoreFeedback",
+      "description": "Buyer star rating and feedback comment for a seller store.",
+      "type": "object",
+      "properties": {
+        "sellerId": {
+          "type": "string",
+          "description": "Target seller store UID."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Authenticated author UID submitting feedback."
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Reviewer display name."
+        },
+        "rating": {
+          "type": "integer",
+          "description": "Star rating from 1 to 5."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["GENERAL", "GROCERY", "PUJA", "FANCY", "DELIVERY"],
+          "description": "Feedback category."
+        },
+        "comment": {
+          "type": "string",
+          "description": "Feedback comment text."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "sellerId",
+        "authorId",
+        "authorName",
+        "rating",
+        "category",
+        "comment",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Tamper-proof append-only inventory and security audit event for anti-theft protection.",
+      "type": "object",
+      "properties": {
+        "sellerId": {
+          "type": "string",
+          "description": "Authenticated seller UID owning this audit log."
+        },
+        "action": {
+          "type": "string",
+          "description": "Short action code (e.g. STOCK_ADJUST, CREATE_ITEM, DELETE_ITEM, LOCK_CHANGE, BACKUP_EXPORT)."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Human-readable description of the change."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "sellerId",
+        "action",
+        "summary",
+        "createdAt"
+      ]
+    },
+    "BuyerAddress": {
+      "title": "BuyerAddress",
+      "description": "Saved buyer delivery address stored privately under the buyer account.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated buyer UID." },
+        "label": { "type": "string", "description": "Address label e.g. Home, Work, Other." },
+        "recipientName": { "type": "string", "description": "Recipient full name." },
+        "phoneNumber": { "type": "string", "description": "Contact phone number for delivery." },
+        "streetAddress": { "type": "string", "description": "House/flat number and street." },
+        "neighborhood": { "type": "string", "description": "Locality or neighborhood." },
+        "landmark": { "type": "string", "description": "Optional nearby landmark." },
+        "lat": { "type": "number", "description": "Delivery latitude." },
+        "lng": { "type": "number", "description": "Delivery longitude." },
+        "defaultAddress": { "type": "boolean", "description": "Whether this is the default checkout delivery address." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp." }
+      },
+      "required": ["userId", "label", "recipientName", "phoneNumber", "streetAddress", "neighborhood", "lat", "lng", "defaultAddress", "createdAt", "updatedAt"]
+    },
+    "PreferredPaymentMethod": {
+      "title": "PreferredPaymentMethod",
+      "description": "Buyer preferred payment method metadata (UPI handle, COD, card label, or wallet) with zero sensitive PAN/CVV storage.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated buyer UID." },
+        "methodType": { "type": "string", "enum": ["UPI", "COD", "CARD_LABEL", "WALLET"], "description": "Preferred payment type." },
+        "displayLabel": { "type": "string", "description": "Friendly display label e.g. Primary GPay or Pay at Doorstep." },
+        "handleOrHint": { "type": "string", "description": "Optional non-sensitive UPI ID, wallet note, or masked card label." },
+        "defaultMethod": { "type": "boolean", "description": "Whether this is the default payment preference at checkout." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp." }
+      },
+      "required": ["userId", "methodType", "displayLabel", "defaultMethod", "createdAt", "updatedAt"]
+    },
+    "WishlistItem": {
+      "title": "WishlistItem",
+      "description": "Buyer-saved favorite puja or grocery product for later purchase.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated buyer UID owning this wishlist item."
+        },
+        "sellerId": {
+          "type": "string",
+          "description": "Seller store UID offering this product."
+        },
+        "storeName": {
+          "type": "string",
+          "description": "Store display name."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Referenced product document ID."
+        },
+        "name": {
+          "type": "string",
+          "description": "Product name."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["GROCERY", "PUJA", "FANCY"],
+          "description": "Product category: GROCERY, PUJA, or FANCY."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit label e.g. 1 kg, 1 pack."
+        },
+        "priceInr": {
+          "type": "number",
+          "description": "Last saved price in INR."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional short description."
+        },
+        "photoUri": {
+          "type": "string",
+          "description": "Optional product photo URI."
+        },
+        "imageTag": {
+          "type": "string",
+          "description": "Optional fallback artwork tag."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "sellerId",
+        "storeName",
+        "productId",
+        "name",
+        "category",
+        "unit",
+        "priceInr",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/accounts/{userId}": {
+      "schema": { "$ref": "#/entities/AccountProfile" },
+      "description": "Private user account profile storing active Seller or Buyer portal role."
+    },
+    "/accounts/{userId}/addresses/{addressId}": {
+      "schema": { "$ref": "#/entities/BuyerAddress" },
+      "description": "Private saved delivery addresses belonging to a buyer account."
+    },
+    "/accounts/{userId}/paymentMethods/{methodId}": {
+      "schema": { "$ref": "#/entities/PreferredPaymentMethod" },
+      "description": "Private preferred payment methods belonging to a buyer account."
+    },
+    "/stores/{sellerId}": {
+      "schema": { "$ref": "#/entities/StoreConfig" },
+      "description": "Seller storefront metadata, Google Maps zone, out-of-stock visibility, and delete protection lock."
+    },
+    "/stores/{sellerId}/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Seller's grocery and puja products readable by buyers and editable only by the seller."
+    },
+    "/stores/{sellerId}/feedback/{feedbackId}": {
+      "schema": { "$ref": "#/entities/StoreFeedback" },
+      "description": "Buyer ratings and feedback for the seller store."
+    },
+    "/stores/{sellerId}/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable append-only anti-theft inventory and security audit trail."
+    },
+    "/accounts/{userId}/wishlist/{itemId}": {
+      "schema": { "$ref": "#/entities/WishlistItem" },
+      "description": "Buyer's private saved wishlist of puja and grocery items."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/SellerOrder" },
+      "description": "Marketplace orders scoped by buyerId and sellerId."
+    }
+  }
+}
